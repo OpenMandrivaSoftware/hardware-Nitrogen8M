@@ -1,0 +1,92 @@
+#!/bin/sh -e
+
+if [ "`id -u`" != 0 ]; then
+	exec sudo "$0" "$@"
+fi
+
+which aarch64-linux-gnu-ld &>/dev/null || dnf install cross-aarch64-openmandriva-linux-gnu-binutils
+which make &>/dev/null || dnf install make glibc-devel
+which gcc &>/dev/null || dnf install gcc
+which git &>/dev/null || dnf install git-core
+which dtc &>/dev/null || dnf install dtc lib64fdt1-devel
+which aarch64-linux-gnu-gcc &>/dev/null || dnf install cross-aarch64-openmandriva-linux-gnu-gcc-bootstrap
+which make_ext4fs &>/dev/null || dnf install android-tools
+which qemu-static-aarch64 &>/dev/null || dnf install qemu-static-aarch64
+
+if [ -d kernel ]; then
+	cd kernel ; git pull ; cd ..
+else
+	# Upstream: boundary-imx_4.9.x_2.0.0_ga branch of https://github.com/boundarydevices/linux-imx6
+	git clone -b hardware/Nitrogen8M/4.9 git@github.com:OpenMandrivaSoftware/linux.git kernel
+fi
+
+CPUS=$(getconf _NPROCESSORS_ONLN)
+[ -z "$CPUS" ] && CPUS=8
+
+# ===== Build kernel =====
+cd kernel
+make ARCH=arm64 CROSS_COMPILE=aarch64-openmandriva-linux-gnu- boundary_defconfig
+make ARCH=arm64 CROSS_COMPILE=aarch64-openmandriva-linux-gnu- -j$CPUS
+make ARCH=arm64 CROSS_COMPILE=aarch64-openmandriva-linux-gnu- -j$CPUS modules
+KVERSION=$(cat include/config/kernel.release)
+cp -f arch/arm64/boot/Image ../Image-${KVERSION}
+cp -f arch/arm64/boot/dts/freescale/imx8mq-nitrogen8m.dtb ../imx8mq-nitrogen8m.dtb-${KVERSION}
+cd ..
+
+# ===== Generate root filesystem =====
+# Hash from the build page, https://abf.openmandriva.org/platforms/cooker/products/47/product_build_lists/2100
+[ -e rootfs-aarch64-systemd.tar.xz ] || wget -O rootfs-aarch64-systemd.tar.xz http://file-store.openmandriva.org/api/v1/file_stores/8b5458f6a7961c3202a7f9ea47c6b1828593242f
+rm -rf rootfs
+mkdir rootfs
+ROOTFS=`pwd`/rootfs
+cd rootfs
+tar xf ../rootfs-aarch64-systemd.tar.xz
+cp /usr/bin/qemu-static-aarch64 ${ROOTFS}/usr/bin
+
+# Create omv user (password omv)
+echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>etc/passwd
+echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>etc/shadow
+echo 'omv:x:1001:' >>etc/group
+sed -i -e 's,wheel:x:10:$,wheel:x:10:omv,' etc/group
+# Unlock root account (also password omv)
+sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' etc/shadow
+cd ..
+cd kernel
+make ARCH=arm64 CROSS_COMPILE=aarch64-openmandriva-linux-gnu- -j$CPUS INSTALL_MOD_PATH=../rootfs modules_install
+cd ..
+cp -f Image-${KVERSION} *.dtb-${KVERSION} rootfs/boot/
+cd rootfs/boot
+for i in *-${KVERSION}; do
+	ln -s $i $(echo $i |sed -e "s,-${KVERSION},,")
+done
+cd ../..
+
+dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh openssh-server dracut
+dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh task-lxqt sddm lib64dri-drivers-etnaviv lib64drm_etnaviv1 || :
+
+chroot ${ROOTFS} /sbin/dracut --xz --omit-drivers pata_acpi -o ifcfg -o lvm -o mdraid -o aufs-mount -f /boot/initrd-${KVERSION}.img ${KVERSION}
+chroot ${ROOTFS} systemctl set-default graphical.target
+chroot ${ROOTFS} systemctl enable getty@tty1.service
+chroot ${ROOTFS} systemctl enable sshd.service
+for i in dbus getty sshd systemd-udevd systemd-udev-trigger NetworkManager systemd-ask-password-wall systemd-logind systemd-networkd systemd-resolved systemd-update-utmp-runlevel systemd-user-sessions; do
+	[ -e ${ROOTFS}/lib/systemd/system/$i.target ] && ln -s /lib/systemd/system/$i.target ${ROOTFS}/lib/systemd/system/multi-user.target.wants/ || :
+	[ -e ${ROOTFS}/lib/systemd/system/$i.service ] && ln -s /lib/systemd/system/$i.service ${ROOTFS}/lib/systemd/system/multi-user.target.wants/ || :
+
+	[ -e ${ROOTFS}/lib/systemd/system/$i.target ] && ln -s /lib/systemd/system/$i.target ${ROOTFS}/lib/systemd/system/graphical.target.wants/ || :
+	[ -e ${ROOTFS}/lib/systemd/system/$i.service ] && ln -s /lib/systemd/system/$i.service ${ROOTFS}/lib/systemd/system/graphical.target.wants/ || :
+done
+rm -f ${ROOTFS}/usr/bin/qemu-static-aarch64
+make_ext4fs -s -l 7200M -K rootfs.img ${ROOTFS}
+
+# Create partition table
+sizeMB=7200
+dd if=/dev/zero of=gpt-temp.img bs=1 count=0 seek=${sizeMB}M
+parted -a minimal -s gpt-temp.img \
+unit MiB \
+mklabel gpt \
+mkpart rootfs 0% 100% \
+print
+
+dd if=gpt-temp.img of=gpt.img count=64
+parted -s gpt-temp.img unit B print
+rm -f gpt-temp.img
