@@ -86,6 +86,8 @@ echo 'omv:x:1001:' >>etc/group
 sed -i -e 's,wheel:x:10:$,wheel:x:10:omv,' etc/group
 # Unlock root account (also password omv)
 sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' etc/shadow
+cp -a etc/skel home/omv
+chown -R 1001:1001 home/omv
 cd ..
 cd kernel
 make ARCH=arm64 CROSS_COMPILE=aarch64-openmandriva-linux-gnu- -j$CPUS INSTALL_MOD_PATH=../rootfs modules_install
