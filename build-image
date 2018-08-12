@@ -46,7 +46,7 @@ cp /usr/bin/qemu-static-aarch64 ${ROOTFS}/usr/bin
 # Update and install some more bits we'll need
 dnf --refresh distro-sync
 dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh openssh-server dracut lib64ffi6 dhcp-client networkmanager less vim-enhanced strace sudo
-dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh task-lxqt sddm lib64dri-drivers-etnaviv lib64drm_etnaviv1 || :
+dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh dbus-x11 task-lxqt sddm lib64dri-drivers-etnaviv lib64drm_etnaviv1 || :
 
 
 # Add missing system users (FIXME: Why aren't those
