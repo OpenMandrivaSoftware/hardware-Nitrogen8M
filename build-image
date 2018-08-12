@@ -48,6 +48,8 @@ dnf --refresh distro-sync
 dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh openssh-server dracut lib64ffi6 dhcp-client networkmanager less vim-enhanced strace sudo kernel-firmware kernel-firmware-extra edidbins
 dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh dbus-x11 task-lxqt sddm lib64dri-drivers-etnaviv lib64drm_etnaviv1 || :
 
+# Fix permissions
+chmod -R 0600 etc/ssh
 
 # Add missing system users (FIXME: Why aren't those
 # created by package %post scripts? Works on x86...)
