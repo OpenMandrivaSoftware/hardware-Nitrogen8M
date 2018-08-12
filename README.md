@@ -10,7 +10,7 @@ In u-boot, run
 
 ext4load mmc 0 ${loadaddr} /boot/Image
 ext4load mmc 0 ${fdt_addr} /boot/imx8mq-nitrogen8m.dtb
-setenv bootargs console=${console},115200 root=/dev/mmcblk0p1 rootwait rw video=HDMI-A-1:1920x1080-32@60 drm kms helper.edid firmware=HDMI-A-1:edid/1920x1080.bin
+setenv bootargs console=${console},115200 root=/dev/mmcblk0p1 rootwait rw video=HDMI-A-1:1920x1080-32@60 drm kms helper.edid firmware=HDMI-A-1:edid/1920x1080.bin systemd.legacy_systemd_cgroup_controller=yes cgroup_enable=memory systemd.unified_cgroup_hierarchy=0
 booti ${loadaddr} - ${fdt_addr}
 
 

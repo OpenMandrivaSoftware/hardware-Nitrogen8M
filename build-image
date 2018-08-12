@@ -129,3 +129,9 @@ print
 dd if=gpt-temp.img of=gpt.img count=64
 parted -s gpt-temp.img unit B print
 rm -f gpt-temp.img
+
+if [ "$ABF" = "1" ]; then
+	output_dir="/home/omv/output"
+	mkdir -p $output_dir
+	mv gpt.img rootfs.img README.md $output_dir/
+fi
