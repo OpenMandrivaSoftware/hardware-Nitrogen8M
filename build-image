@@ -43,6 +43,42 @@ cd rootfs
 tar xf ../rootfs-aarch64-systemd.tar.xz
 cp /usr/bin/qemu-static-aarch64 ${ROOTFS}/usr/bin
 
+# Update and install some more bits we'll need
+dnf --refresh distro-sync
+dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh openssh-server dracut lib64ffi6 dhcp-client networkmanager less vim-enhanced strace sudo
+dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh task-lxqt sddm lib64dri-drivers-etnaviv lib64drm_etnaviv1 || :
+
+
+# Add missing system users (FIXME: Why aren't those
+# created by package %post scripts? Works on x86...)
+cat >>etc/group <<EOF
+systemd-network:x:997:
+systemd-journal:x:999:
+systemd-timesync:x:995:
+systemd-resolve:x:994:
+systemd-coredump:x:996:
+EOF
+cat >>etc/passwd <<EOF
+systemd-network:x:997:997:systemd Network Management:/:/sbin/nologin
+systemd-timesync:x:995:995:systemd Time Synchronization:/:/sbin/nologin
+systemd-resolve:x:994:994:systemd Resolver:/:/sbin/nologin
+systemd-coredump:x:996:996:systemd Core Dumper:/:/sbin/nologin
+EOF
+cat >>etc/shadow <<EOF
+systemd-network:!!:17475::::::
+systemd-timesync:!!:17475::::::
+systemd-resolve:!!:17475::::::
+systemd-coredump:!!:17475::::::
+EOF
+cat >>etc/gshadow <<EOF
+systemd-network:!!::
+systemd-journal:!!::
+systemd-timesync:!!::
+systemd-resolve:!!::
+systemd-coredump:!!::
+EOF
+
+# For now, until we have a proper installer...
 # Create omv user (password omv)
 echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>etc/passwd
 echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>etc/shadow
@@ -61,14 +97,12 @@ for i in *-${KVERSION}; do
 done
 cd ../..
 
-dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh openssh-server dracut lib64ffi6
-dnf install -y --installroot=${ROOTFS} --forcearch aarch64 --refresh task-lxqt sddm lib64dri-drivers-etnaviv lib64drm_etnaviv1 || :
-
 chroot ${ROOTFS} /sbin/dracut --xz --omit-drivers pata_acpi -o ifcfg -o lvm -o mdraid -o aufs-mount -f /boot/initrd-${KVERSION}.img ${KVERSION}
 #chroot ${ROOTFS} systemctl set-default graphical.target
 chroot ${ROOTFS} systemctl set-default multi-user.target
 chroot ${ROOTFS} systemctl enable getty@tty1.service
 chroot ${ROOTFS} systemctl enable getty@ttymxc0.service
+chroot ${ROOTFS} systemctl enable NetworkManager.service
 chroot ${ROOTFS} systemctl enable sshd.service
 for i in dbus getty sshd systemd-udevd systemd-udev-trigger NetworkManager systemd-ask-password-wall systemd-logind systemd-networkd systemd-resolved systemd-update-utmp-runlevel systemd-user-sessions; do
 	[ -e ${ROOTFS}/lib/systemd/system/$i.target ] && ln -s /lib/systemd/system/$i.target ${ROOTFS}/lib/systemd/system/multi-user.target.wants/ || :
@@ -79,7 +113,7 @@ for i in dbus getty sshd systemd-udevd systemd-udev-trigger NetworkManager syste
 done
 rm -f ${ROOTFS}/usr/bin/qemu-static-aarch64
 # Good: make_ext4fs -s -l 7180M -K rootfs.img ${ROOTFS}
-make_ext4fs -s -l 7198M -K rootfs.img ${ROOTFS}
+make_ext4fs -s -l 7199M -K rootfs.img ${ROOTFS}
 
 # Create partition table
 sizeMB=7200
