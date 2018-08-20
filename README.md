@@ -1,20 +1,24 @@
-= Install =
+# Install
 Put the Nitrogen8M into fastboot mode by holding the fastboot button
 and pressing and releasing the reset button
 
+```
 fastboot flash gpt gpt.img
 fastboot flash rootfs rootfs.img
+```
 
-= Boot =
+# Boot
 In u-boot, run
 
+```
 ext4load mmc 0 ${loadaddr} /boot/Image
 ext4load mmc 0 ${fdt_addr} /boot/imx8mq-nitrogen8m.dtb
-setenv bootargs console=${console},115200 root=/dev/mmcblk0p1 rootwait rw video=HDMI-A-1:1920x1080-32@60 drm kms helper.edid firmware=HDMI-A-1:edid/1920x1080.bin systemd.legacy_systemd_cgroup_controller=yes cgroup_enable=memory systemd.unified_cgroup_hierarchy=0
+setenv bootargs console=${console},115200 root=/dev/mmcblk0p1 rootwait rw video=HDMI-A-1:1920x1080-32@60 drm_kms_helper.edid_firmware=HDMI-A-1:edid/1920x1080.bin systemd.legacy_systemd_cgroup_controller=yes cgroup_enable=memory systemd.unified_cgroup_hierarchy=0
 booti ${loadaddr} - ${fdt_addr}
+```
 
-
-= Default u-boot environment, just in case something needs to be restored =
+# Dump of default u-boot environment, just in case something needs to be restored
+```
 arch=arm
 baudrate=115200
 board=nitrogen8m
@@ -67,4 +71,4 @@ uboot_defconfig=nitrogen8m
 upgradeu=setenv boot_scripts upgrade.scr; boot;echo Upgrade failed!; setenv boot_scripts boot.scr
 usb_boot=usb start; if usb dev ${devnum}; then setenv devtype usb; run scan_dev_for_boot_part; fi
 vendor=boundary
-
+```
