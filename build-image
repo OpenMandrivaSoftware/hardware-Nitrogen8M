@@ -5,13 +5,13 @@ if [ "`id -u`" != 0 ]; then
 fi
 
 which aarch64-linux-gnu-ld &>/dev/null || dnf install cross-aarch64-openmandriva-linux-gnu-binutils
-which make &>/dev/null || dnf install make glibc-devel
-which gcc &>/dev/null || dnf install gcc
-which git &>/dev/null || dnf install git-core
-which dtc &>/dev/null || dnf install dtc lib64fdt1-devel
-which aarch64-linux-gnu-gcc &>/dev/null || dnf install cross-aarch64-openmandriva-linux-gnu-gcc-bootstrap
-which make_ext4fs &>/dev/null || dnf install android-tools
-which qemu-static-aarch64 &>/dev/null || dnf install qemu-static-aarch64
+which make &>/dev/null || dnf install -y --nogpgcheck make glibc-devel
+which gcc &>/dev/null || dnf install -y --nogpgcheck gcc
+which git &>/dev/null || dnf install -y --nogpgcheck git-core
+which dtc &>/dev/null || dnf install -y --nogpgcheck dtc lib64fdt1-devel
+which aarch64-linux-gnu-gcc &>/dev/null || dnf install -y --nogpgcheck cross-aarch64-openmandriva-linux-gnu-gcc-bootstrap
+which make_ext4fs &>/dev/null || dnf install -y --nogpgcheck android-tools
+which qemu-static-aarch64 &>/dev/null || dnf install -y --nogpgcheck qemu-static-aarch64
 
 if [ -d kernel ]; then
 	cd kernel ; git pull ; cd ..
