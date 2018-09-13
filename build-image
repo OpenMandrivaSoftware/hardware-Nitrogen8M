@@ -9,6 +9,7 @@ which make &>/dev/null || dnf install -y --nogpgcheck make glibc-devel
 which gcc &>/dev/null || dnf install -y --nogpgcheck gcc
 which git &>/dev/null || dnf install -y --nogpgcheck git-core
 which dtc &>/dev/null || dnf install -y --nogpgcheck dtc lib64fdt1-devel
+which parted &>/dev/null || dnf install -y --nogpgcheck parted
 which aarch64-linux-gnu-gcc &>/dev/null || dnf install -y --nogpgcheck cross-aarch64-openmandriva-linux-gnu-gcc-bootstrap
 which make_ext4fs &>/dev/null || dnf install -y --nogpgcheck android-tools
 which qemu-static-aarch64 &>/dev/null || dnf install -y --nogpgcheck qemu-static-aarch64
